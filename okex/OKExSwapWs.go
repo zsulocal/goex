@@ -359,7 +359,7 @@ func (okV3Ws *OKExV3SwapWs) handle(channel string, data json.RawMessage) error {
 		}
 		return nil
 	case "account":
-		okV3Ws.accountCallback(&FutureAccount{})
+		okV3Ws.accountCallback(&SwapAccountInfo{})
 		return nil
 	}
 
