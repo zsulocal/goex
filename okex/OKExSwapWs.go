@@ -18,7 +18,7 @@ type OKExV3SwapWs struct {
 	tickerCallback   func(*FutureTicker)
 	loginCallback    func(bool)
 	positionCallback func(*FuturePosition)
-	accountCallback  func(*FutureAccount)
+	accountCallback  func(*SwapAccountInfo)
 	depthCallback    func(*Depth)
 	tradeCallback    func(*Trade, string)
 	klineCallback    func(*FutureKline, int)
@@ -44,7 +44,7 @@ func (okV3Ws *OKExV3SwapWs) PositionCallback(positionCallback func(*FuturePositi
 	okV3Ws.positionCallback = positionCallback
 }
 
-func (okV3Ws *OKExV3SwapWs) AccountCallback(accountCallback func(*FutureAccount)) {
+func (okV3Ws *OKExV3SwapWs) AccountCallback(accountCallback func(*SwapAccountInfo)) {
 	okV3Ws.accountCallback = accountCallback
 }
 
