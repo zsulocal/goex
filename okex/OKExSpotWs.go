@@ -25,7 +25,7 @@ func NewOKExSpotV3Ws(base *OKEx) *OKExV3SpotWs {
 	okV3Ws := &OKExV3SpotWs{
 		base: base,
 	}
-	okV3Ws.v3Ws = NewOKExV3Ws(base, okV3Ws.handle)
+	okV3Ws.v3Ws = NewOKExV3Ws(base, okV3Ws.handle, nil)
 	return okV3Ws
 }
 

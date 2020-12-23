@@ -119,6 +119,14 @@ func (ok *OKEx) doParamSign(httpMethod, uri, requestBody string) (string, string
 	return sign, timestamp
 }
 
+func (ok *OKEx) GetParamSign(httpMethod, uri, requestBody string) (string, string) {
+	timestamp := fmt.Sprintf("%.4f", float64(time.Now().UnixNano())/1000000000)
+	preText := fmt.Sprintf("%s%s%s%s", timestamp, strings.ToUpper(httpMethod), uri, requestBody)
+	//log.Println("preHash", preText)
+	sign, _ := GetParamHmacSHA256Base64Sign(ok.config.ApiSecretKey, preText)
+	return sign, timestamp
+}
+
 /*
  Get a iso time
   eg: 2018-03-16T18:02:48.284Z

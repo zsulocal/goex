@@ -24,16 +24,18 @@ type wsResp struct {
 type OKExV3Ws struct {
 	base *OKEx
 	*WsBuilder
-	once       *sync.Once
-	WsConn     *WsConn
-	respHandle func(channel string, data json.RawMessage) error
+	once        *sync.Once
+	WsConn      *WsConn
+	eventHandle func(event string, resp wsResp) error
+	respHandle  func(channel string, data json.RawMessage) error
 }
 
-func NewOKExV3Ws(base *OKEx, handle func(channel string, data json.RawMessage) error) *OKExV3Ws {
+func NewOKExV3Ws(base *OKEx, handle func(channel string, data json.RawMessage) error, event_handle func(event string, resp wsResp) error) *OKExV3Ws {
 	okV3Ws := &OKExV3Ws{
-		once:       new(sync.Once),
-		base:       base,
-		respHandle: handle,
+		once:        new(sync.Once),
+		base:        base,
+		respHandle:  handle,
+		eventHandle: event_handle,
 	}
 	okV3Ws.WsBuilder = NewWsBuilder().
 		WsUrl("wss://real.okex.com:8443/ws/v3").
@@ -109,6 +111,9 @@ func (okV3Ws *OKExV3Ws) handle(msg []byte) error {
 			return nil
 		case "error":
 			logger.Errorf(string(msg))
+		case "login":
+			okV3Ws.eventHandle("login", wsResp)
+			return nil
 		default:
 			logger.Info(string(msg))
 		}

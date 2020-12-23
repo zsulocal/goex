@@ -37,6 +37,8 @@ type SwapAccountInfo struct {
 	Timestamp         string  `json:"timestamp"`
 	MarginFrozen      float64 `json:"margin_frozen,string"`
 	TotalAvailBalance float64 `json:"total_avail_balance,string"`
+	LongOpenMax       float64 `json:"long_open_max,string"`
+	ShortOpenMax      float64 `json:"short_open_max,string"`
 	MarginRatio       float64 `json:"margin_ratio,string"`
 	RealizedPnl       float64 `json:"realized_pnl,string"`
 	UnrealizedPnl     float64 `json:"unrealized_pnl,string"`

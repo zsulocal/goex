@@ -13,24 +13,39 @@ import (
 )
 
 type OKExV3SwapWs struct {
-	base           *OKEx
-	v3Ws           *OKExV3Ws
-	tickerCallback func(*FutureTicker)
-	depthCallback  func(*Depth)
-	tradeCallback  func(*Trade, string)
-	klineCallback  func(*FutureKline, int)
+	base             *OKEx
+	v3Ws             *OKExV3Ws
+	tickerCallback   func(*FutureTicker)
+	loginCallback    func(bool)
+	positionCallback func(*FuturePosition)
+	accountCallback  func(*FutureAccount)
+	depthCallback    func(*Depth)
+	tradeCallback    func(*Trade, string)
+	klineCallback    func(*FutureKline, int)
 }
 
 func NewOKExV3SwapWs(base *OKEx) *OKExV3SwapWs {
 	okV3Ws := &OKExV3SwapWs{
 		base: base,
 	}
-	okV3Ws.v3Ws = NewOKExV3Ws(base, okV3Ws.handle)
+	okV3Ws.v3Ws = NewOKExV3Ws(base, okV3Ws.handle, okV3Ws.eventHandle)
 	return okV3Ws
+}
+
+func (okV3Ws *OKExV3SwapWs) LoginCallback(loginCallback func(bool)) {
+	okV3Ws.loginCallback = loginCallback
 }
 
 func (okV3Ws *OKExV3SwapWs) TickerCallback(tickerCallback func(*FutureTicker)) {
 	okV3Ws.tickerCallback = tickerCallback
+}
+
+func (okV3Ws *OKExV3SwapWs) PositionCallback(positionCallback func(*FuturePosition)) {
+	okV3Ws.positionCallback = positionCallback
+}
+
+func (okV3Ws *OKExV3SwapWs) AccountCallback(accountCallback func(*FutureAccount)) {
+	okV3Ws.accountCallback = accountCallback
 }
 
 func (okV3Ws *OKExV3SwapWs) DepthCallback(depthCallback func(*Depth)) {
@@ -80,6 +95,14 @@ func (okV3Ws *OKExV3SwapWs) getChannelName(currencyPair CurrencyPair, contractTy
 	return channelName
 }
 
+func (okV3Ws *OKExV3SwapWs) Login() {
+	sign, timestamp := okV3Ws.base.GetParamSign("GET", "/users/self/verify", "")
+	okV3Ws.v3Ws.Subscribe(map[string]interface{}{
+		"op":   "login",
+		"args": []string{okV3Ws.base.config.ApiKey, okV3Ws.base.config.ApiPassphrase, timestamp, sign},
+	})
+}
+
 func (okV3Ws *OKExV3SwapWs) SubscribeDepth(currencyPair CurrencyPair, contractType string) error {
 	if okV3Ws.depthCallback == nil {
 		return errors.New("please set depth callback func")
@@ -108,6 +131,36 @@ func (okV3Ws *OKExV3SwapWs) SubscribeTicker(currencyPair CurrencyPair, contractT
 	return okV3Ws.v3Ws.Subscribe(map[string]interface{}{
 		"op":   "subscribe",
 		"args": []string{fmt.Sprintf(chName, "ticker")}})
+}
+
+func (okV3Ws *OKExV3SwapWs) SubscribePosition(currencyPair CurrencyPair, contractType string) error {
+	if okV3Ws.positionCallback == nil {
+		return errors.New("please set positioncallback func")
+	}
+
+	chName := okV3Ws.getChannelName(currencyPair, contractType)
+	if chName == "" {
+		return errors.New("subscribe error, get channel name fail")
+	}
+
+	return okV3Ws.v3Ws.Subscribe(map[string]interface{}{
+		"op":   "subscribe",
+		"args": []string{fmt.Sprintf(chName, "position")}})
+}
+
+func (okV3Ws *OKExV3SwapWs) SubscribeAccount(currencyPair CurrencyPair, contractType string) error {
+	if okV3Ws.accountCallback == nil {
+		return errors.New("please set account callback func")
+	}
+
+	chName := okV3Ws.getChannelName(currencyPair, contractType)
+	if chName == "" {
+		return errors.New("subscribe error, get channel name fail")
+	}
+
+	return okV3Ws.v3Ws.Subscribe(map[string]interface{}{
+		"op":   "subscribe",
+		"args": []string{fmt.Sprintf(chName, "account")}})
 }
 
 func (okV3Ws *OKExV3SwapWs) SubscribeTrade(currencyPair CurrencyPair, contractType string) error {
@@ -185,6 +238,9 @@ func (okV3Ws *OKExV3SwapWs) handle(channel string, data json.RawMessage) error {
 	if strings.Contains(channel, "futures/candle") ||
 		strings.Contains(channel, "swap/candle") {
 		ch = "candle"
+	} else if strings.Contains(channel, "futures/account") ||
+		strings.Contains(channel, "swap/account") {
+		ch = "account"
 	} else {
 		ch, err = okV3Ws.v3Ws.parseChannel(channel)
 		if err != nil {
@@ -302,9 +358,22 @@ func (okV3Ws *OKExV3SwapWs) handle(channel string, data json.RawMessage) error {
 			}, alias)
 		}
 		return nil
+	case "account":
+		okV3Ws.accountCallback(&FutureAccount{})
+		return nil
 	}
 
 	return fmt.Errorf("[%s] unknown websocket message: %s", ch, string(data))
+}
+
+func (okV3Ws *OKExV3SwapWs) eventHandle(event string, resp wsResp) error {
+
+	switch event {
+	case "login":
+		okV3Ws.loginCallback(resp.Success)
+		return nil
+	}
+	return fmt.Errorf("[%s] unknown websocket message: %s", event, string(resp.Data))
 }
 
 func (okV3Ws *OKExV3SwapWs) getKlinePeriodFormChannel(channel string) int {
